@@ -146,7 +146,7 @@ plt.ylabel("GDP per capita")
 plt.show()
 
 
-# The plot of CO2 Emissions(1990-2019) in India is plotted
+# Cluster plot gdp vs electricity consumed for UK
 plt.figure(figsize=(10, 10), dpi=300)
 plt.plot(uk_df.index, uk_df['electricity_kwh'])
 plt.xlabel("Years", fontsize=14)
@@ -156,7 +156,7 @@ plt.xticks(ticks=['1989', '1994', '1999', '2004', '2009', '2014'],
            labels=['1989', '1994', '1999', '2004', '2009', '2014'])
 plt.show()
 
-# The plot of GDP per capita (1990-2019) in India is plotted
+
 plt.figure(figsize=(10, 10), dpi=300)
 plt.plot(uk_df.index, uk_df["gdp_per_capita"])
 plt.xlabel("Years", fontsize=14)
@@ -172,3 +172,5 @@ uk_df["Year"] = pd.to_numeric(uk_df['Year'])
 
 # Forecast GDP per capita
 forecast(uk_df, 'gdp_per_capita')
+
+forecast(uk_df, 'electricity_kwh')
