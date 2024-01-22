@@ -16,6 +16,7 @@ import errors as err
 import warnings
 
 warnings.filterwarnings('ignore')
+plt.rc("axes.spines", top=False, right=False)
 
 
 def read(path):
@@ -41,7 +42,7 @@ def one_silhouette(df_norm, n):
     """
     Function for calculating silhouette score for kmeans clustering
     Arguments: [int, DataFrame] Number of clusters, Normalized dataframe
-    Returns:
+    Returns: [float] score
     """
     # Set up the clusterer
     kmeans = cluster.KMeans(n_clusters=n, n_init=20)
@@ -49,16 +50,10 @@ def one_silhouette(df_norm, n):
     kmeans.fit(df_norm)
     labels = kmeans.labels_
     centers = kmeans.cluster_centers_
+    print(centers)
     # Calculate silhouette score
     score = skmet.silhouette_score(df_norm, labels)
     return score
-
-
-def poly(x, a, b, c):
-    x = x - 2003
-    f = a + b*x + c*x**2
-
-    return f
 
 
 def logistic(t, n0, g, t0):
@@ -69,25 +64,120 @@ def logistic(t, n0, g, t0):
     return f
 
 
-def forecast(uk_df, variable):
-    # Calculates the parameters and covariance
-    param, covar = opt.curve_fit(logistic, uk_df["Year"],
-                                 uk_df[variable], p0=(3e12, 4, 2004))
-    print(param)
-    # create array for forecasting
-    year = np.linspace(1989, 2030, 100)
-    forecast = logistic(year, *param)
-    sigma = err.error_prop(year, logistic, param, covar)
-    up = forecast + sigma
-    low = forecast - sigma
-    plt.figure()
-    plt.plot(uk_df["Year"], uk_df[variable], label="GDP per capita")
-    plt.plot(year, forecast, label="forecast")
-    plt.fill_between(year, low, up, color="yellow", alpha=0.7)
-    plt.xlabel("year")
-    plt.ylabel("GDP")
-    plt.legend()
-    plt.show()
+# Define the function for the cubic fit
+def cubic_fit(x, a, b, c, d):
+    """
+    Calulcates the cubic function to fit the graph
+    Arguments: Function parameters
+    Returns: Function value
+    """
+    return a * x**3 + b * x**2 + c * x + d
+
+
+# Define the combined function (linear + sine)
+def combined_function(x, a, b, c, amplitude, frequency, phase):
+    """
+    Calculates a combined polynomial and sin function to fit the graph
+    Arguments: Function parameters
+    Returns: Function value
+    """
+    return a * x + b + amplitude * np.sin(2 * np.pi * frequency * (x - phase))
+
+
+def forecast(df, column, f, n=0,):
+    """
+    Takes four arguments and plots a forecast curve using curve_fit
+    Arguments: Dataframe, Column name, n, f
+    Return: None
+    """
+    # If f is 1 then call logistic function
+    if f == 1:
+        # Calculates the parameters and covariance
+        param, covar = opt.curve_fit(logistic, df["Year"], df[column],
+                                     maxfev=4000, p0=(3e12, n, 2004))
+        year = np.linspace(1989, 2024, 1000)
+        # create array for forecasting
+        forecast = logistic(year, *param)
+        # Calculcate the sigma value
+        sigma = err.error_prop(year, logistic, param, covar)
+        up = forecast + sigma
+        low = forecast - sigma
+        plt.figure(figsize=(12, 10), dpi=400)
+        plt.plot(df["Year"], df[column], label=column)
+        plt.plot(year, forecast, label="Forecast")
+        plt.fill_between(year, low, up, color="yellow", alpha=0.7,
+                         label='Confidence margin')
+        plt.xlabel("Year", fontsize=15)
+        plt.ylabel(column.title(), fontsize=15)
+        if column == 'gdp_per_capita':
+            plt.title('GDP per capita forecast', fontsize=18)
+        else:
+            plt.title('Electricity Consumption per capita', fontsize=18)
+        plt.legend(loc=4, fontsize=15)
+        plt.savefig(f'{column}.png', dpi=400)
+        plt.show()
+
+    elif f == 2:  # If f is 2 call combined function
+        # Provide initial guesses for the parameters
+        initial_guesses = [0.1, 1, 1, 500, 0.1, 2005]
+
+        # Perform the curve fitting with increased maxfev and initial guesses
+        param, covar = opt.curve_fit(combined_function, df['Year'],
+                                     df[column], maxfev=3000,
+                                     p0=initial_guesses)
+        # Extract the optimized parameters
+        a, b, c, amplitude, frequency, phase = param
+        year = np.linspace(1989, 2024, 1000)
+        # Generate the fitted curve
+        forecast = combined_function(year, a, b, c, amplitude,
+                                     frequency, phase)
+        # Calculcate the sigma value
+        sigma = err.error_prop(year, combined_function, param, covar)
+        up = forecast + sigma
+        low = forecast - sigma
+        plt.figure(figsize=(12, 10), dpi=400)
+        plt.plot(df["Year"], df[column], label=column)
+        plt.plot(year, forecast, label="Forecast")
+        plt.fill_between(year, low, up, color="yellow", alpha=0.7,
+                         label='Confidence margin')
+        plt.xlabel("Year", fontsize=15)
+        plt.ylabel(column.title(), fontsize=15)
+        if column == 'gdp_per_capita':
+            plt.title('GDP per capita forecast', fontsize=18)
+        else:
+            plt.title('Electricity Consumption per capita', fontsize=18)
+        plt.legend(loc=4, fontsize=15)
+        plt.savefig(f'{column}.png', dpi=400)
+        plt.show()
+
+    elif f == 3:  # If f is 3 then call cubic function
+        # Perform the curve fitting
+        param, covar = opt.curve_fit(cubic_fit, df['Year'],
+                                     df[column])
+
+        # Extract the optimized parameters
+        a, b, c, d = param
+        year = np.linspace(1989, 2019, 1000)
+        # Generate the fitted curve
+        forecast = cubic_fit(year, a, b, c, d)
+        # Calculcate the sigma value
+        sigma = err.error_prop(year, cubic_fit, param, covar)
+        up = forecast + sigma
+        low = forecast - sigma
+        plt.figure(figsize=(12, 10), dpi=400)
+        plt.plot(df["Year"], df[column], label=column)
+        plt.plot(year, forecast, label="Forecast")
+        plt.fill_between(year, low, up, color="yellow", alpha=0.7,
+                         label='Confidence margin')
+        plt.xlabel("Year", fontsize=15)
+        plt.ylabel(column.title(), fontsize=15)
+        if column == 'gdp_per_capita':
+            plt.title('GDP per capita forecast', fontsize=18)
+        else:
+            plt.title('Electricity Consumption per capita', fontsize=18)
+        plt.legend(loc=4, fontsize=15)
+        plt.savefig(f'{column}.png', dpi=400)
+        plt.show()
 
 
 # Get our data from the files using the read function
@@ -138,15 +228,17 @@ y = uk_df["gdp_per_capita"]
 plt.figure(figsize=(8.0, 8.0))
 # Plot data with kmeans cluster number
 cm = 'Set1'
-plt.scatter(x, y, 10, labels, marker="o", cmap=cm)
+plt.scatter(x, y, 40, labels, marker="o", cmap=cm)
 # Plot cluster centres
-plt.scatter(xkmeans, ykmeans, 45, "k", marker="d")
+plt.scatter(xkmeans, ykmeans, 65, "k", marker="d")
 plt.xlabel("Electricity Consumption")
 plt.ylabel("GDP per capita")
+plt.title('Electricity consumption vs GDP per capita', fontsize=18)
+plt.savefig('cluster.png', dpi=400)
 plt.show()
 
 
-# Cluster plot gdp vs electricity consumed for UK
+# Plot for electricity consumption in the UK: 1989-2014
 plt.figure(figsize=(10, 10), dpi=300)
 plt.plot(uk_df.index, uk_df['electricity_kwh'])
 plt.xlabel("Years", fontsize=14)
@@ -154,9 +246,10 @@ plt.ylabel("Electricity consumption per kwh", fontsize=13)
 plt.title("Electricity Consumption in the UK", fontsize=18)
 plt.xticks(ticks=['1989', '1994', '1999', '2004', '2009', '2014'],
            labels=['1989', '1994', '1999', '2004', '2009', '2014'])
+plt.savefig('kwh.png', dpi=400)
 plt.show()
 
-
+# Plot for gdp per capita in the UK: 1989-2014
 plt.figure(figsize=(10, 10), dpi=300)
 plt.plot(uk_df.index, uk_df["gdp_per_capita"])
 plt.xlabel("Years", fontsize=14)
@@ -164,6 +257,7 @@ plt.ylabel("GDP per capita", fontsize=14)
 plt.title("GDP per capita of the UK", fontsize=18)
 plt.xticks(ticks=['1989', '1994', '1999', '2004', '2009', '2014'],
            labels=['1989', '1994', '1999', '2004', '2009', '2014'])
+plt.savefig('gdp_line.png', dpi=400)
 plt.show()
 
 # Reset index and parse Year into a numeric value
@@ -171,6 +265,7 @@ uk_df = uk_df.reset_index()
 uk_df["Year"] = pd.to_numeric(uk_df['Year'])
 
 # Forecast GDP per capita
-forecast(uk_df, 'gdp_per_capita')
+forecast(uk_df, 'gdp_per_capita', 1, 4)
 
-forecast(uk_df, 'electricity_kwh')
+# Forecast Electricity consumption per capita
+forecast(uk_df, 'electricity_kwh', 3)
