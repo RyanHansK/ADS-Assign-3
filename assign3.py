@@ -252,7 +252,7 @@ plt.ylabel("Electricity consumption per kwh", fontsize=13)
 plt.title("Electricity Consumption in the UK", fontsize=18)
 plt.xticks(ticks=['1989', '1994', '1999', '2004', '2009', '2014'],
            labels=['1989', '1994', '1999', '2004', '2009', '2014'])
-plt.savefig('kwh.png', dpi=400)
+plt.savefig('UK_kwh.png', dpi=400)
 plt.show()
 
 # Plot for gdp per capita in the UK: 1989-2014
@@ -263,7 +263,7 @@ plt.ylabel("GDP per capita", fontsize=14)
 plt.title("GDP per capita of the UK", fontsize=18)
 plt.xticks(ticks=['1989', '1994', '1999', '2004', '2009', '2014'],
            labels=['1989', '1994', '1999', '2004', '2009', '2014'])
-plt.savefig('gdp_line.png', dpi=400)
+plt.savefig('UK_gdp_line.png', dpi=400)
 plt.show()
 
 # Reset index and parse Year into a numeric value
@@ -289,7 +289,16 @@ germany_df = germany_df.loc['1989':'2014']
 # Reset index and parse Year into a numeric value
 germany_df = germany_df.reset_index()
 germany_df["Year"] = pd.to_numeric(germany_df['Year'])
-# Forecast for germany
-print(germany_df)
+# Plot for gdp per capita of Germany: 1989-2014
+plt.figure(figsize=(10, 10), dpi=300)
+plt.plot(germany_df.index, germany_df["gdp_per_capita"])
+plt.xlabel("Years", fontsize=14)
+plt.ylabel("GDP per capita", fontsize=14)
+plt.title("GDP per capita of Germany", fontsize=18)
+plt.xticks(ticks=['1989', '1994', '1999', '2004', '2009', '2014'],
+           labels=['1989', '1994', '1999', '2004', '2009', '2014'])
+plt.savefig('Germany_gdp_line.png', dpi=400)
+plt.show()
 
+# Forecast for germany
 forecast(germany_df, 'gdp_per_capita', 'Germany', 2)
