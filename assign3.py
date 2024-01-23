@@ -84,10 +84,11 @@ def combined_function(x, a, b, c, amplitude, frequency, phase):
     return a * x + b + amplitude * np.sin(2 * np.pi * frequency * (x - phase))
 
 
-def forecast(df, column, f, n=0,):
+def forecast(df, column, country, f, n=0,):
     """
-    Takes four arguments and plots a forecast curve using curve_fit
-    Arguments: Dataframe, Column name, n, f
+    Takes five arguments and plots a forecast curve using curve_fit
+    Arguments: Dataframe, Column name, n, f can be 1,2 or 3 indicating curve
+    functions logistic, combined_function and cubic_fit respectively.
     Return: None
     """
     # If f is 1 then call logistic function
@@ -114,17 +115,19 @@ def forecast(df, column, f, n=0,):
         else:
             plt.title('Electricity Consumption per capita', fontsize=18)
         plt.legend(loc=4, fontsize=15)
-        plt.savefig(f'{column}.png', dpi=400)
+        plt.savefig(f'{country}_{column}.png', dpi=400)
         plt.show()
 
     elif f == 2:  # If f is 2 call combined function
         # Provide initial guesses for the parameters
-        initial_guesses = [0.1, 1, 1, 500, 0.1, 2005]
-
+        initial_guesses = [1, 5, 10, 5000, 0.1, 1990]
+        # Set bounds for the parameters
+        bounds = ([-np.inf, -np.inf, -np.inf, 0, 0, -np.inf],
+                  [np.inf, np.inf, np.inf, 100000, np.inf, np.inf])
         # Perform the curve fitting with increased maxfev and initial guesses
         param, covar = opt.curve_fit(combined_function, df['Year'],
                                      df[column], maxfev=3000,
-                                     p0=initial_guesses)
+                                     p0=initial_guesses, bounds=bounds)
         # Extract the optimized parameters
         a, b, c, amplitude, frequency, phase = param
         year = np.linspace(1989, 2024, 1000)
@@ -133,6 +136,9 @@ def forecast(df, column, f, n=0,):
                                      frequency, phase)
         # Calculcate the sigma value
         sigma = err.error_prop(year, combined_function, param, covar)
+        # This is causing problems.... curve_fit cant get covariance array
+        # values correct
+        print(covar)
         up = forecast + sigma
         low = forecast - sigma
         plt.figure(figsize=(12, 10), dpi=400)
@@ -147,7 +153,7 @@ def forecast(df, column, f, n=0,):
         else:
             plt.title('Electricity Consumption per capita', fontsize=18)
         plt.legend(loc=4, fontsize=15)
-        plt.savefig(f'{column}.png', dpi=400)
+        plt.savefig(f'{country}_{column}.png', dpi=400)
         plt.show()
 
     elif f == 3:  # If f is 3 then call cubic function
@@ -176,7 +182,7 @@ def forecast(df, column, f, n=0,):
         else:
             plt.title('Electricity Consumption per capita', fontsize=18)
         plt.legend(loc=4, fontsize=15)
-        plt.savefig(f'{column}.png', dpi=400)
+        plt.savefig(f'{country}_{column}.png', dpi=400)
         plt.show()
 
 
@@ -265,7 +271,25 @@ uk_df = uk_df.reset_index()
 uk_df["Year"] = pd.to_numeric(uk_df['Year'])
 
 # Forecast GDP per capita
-forecast(uk_df, 'gdp_per_capita', 1, 4)
+forecast(uk_df, 'gdp_per_capita', 'UK', 1, 4)
 
 # Forecast Electricity consumption per capita
-forecast(uk_df, 'electricity_kwh', 3)
+forecast(uk_df, 'electricity_kwh', 'UK', 3)
+
+# Get data for Country of interest and merge it
+germany_df = pd.merge(electric_df['Germany'], gdp_df['Germany'],
+                      on=electric_df.index)
+# Rename Columns
+germany_df.rename(columns={'key_0': 'Year', 'Germany_x': 'electricity_kwh',
+                  'Germany_y': 'gdp_per_capita'}, inplace=True)
+germany_df.set_index('Year', inplace=True)
+# Slice the data from 1990-2014
+germany_df = germany_df.loc['1989':'2014']
+
+# Reset index and parse Year into a numeric value
+germany_df = germany_df.reset_index()
+germany_df["Year"] = pd.to_numeric(germany_df['Year'])
+# Forecast for germany
+print(germany_df)
+
+forecast(germany_df, 'gdp_per_capita', 'Germany', 2)
