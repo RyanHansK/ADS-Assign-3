@@ -286,9 +286,6 @@ germany_df.set_index('Year', inplace=True)
 # Slice the data from 1990-2014
 germany_df = germany_df.loc['1989':'2014']
 
-# Reset index and parse Year into a numeric value
-germany_df = germany_df.reset_index()
-germany_df["Year"] = pd.to_numeric(germany_df['Year'])
 # Plot for gdp per capita of Germany: 1989-2014
 plt.figure(figsize=(10, 10), dpi=300)
 plt.plot(germany_df.index, germany_df["gdp_per_capita"])
@@ -299,6 +296,10 @@ plt.xticks(ticks=['1989', '1994', '1999', '2004', '2009', '2014'],
            labels=['1989', '1994', '1999', '2004', '2009', '2014'])
 plt.savefig('Germany_gdp_line.png', dpi=400)
 plt.show()
+
+# Reset index and parse Year into a numeric value
+germany_df = germany_df.reset_index()
+germany_df["Year"] = pd.to_numeric(germany_df['Year'])
 
 # Forecast for germany
 forecast(germany_df, 'gdp_per_capita', 'Germany', 2)
